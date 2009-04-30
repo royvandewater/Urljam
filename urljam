@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+
+import sys
+import urllib
+from urllib2 import urlopen
+from BeautifulSoup import BeautifulSoup
+import re
+import getopt
+
+def isgd(url):
+    try:
+        response = urlopen("http://is.gd/api.php?longurl=%s" % url)
+        if response.code == 200:
+            return response.read()
+    except:
+        pass
+    return 0
+
+def tinyurl(url):
+    form_data = {
+        'url':url,
+    }
+    try:
+        response = urlopen("http://tinyurl.com/create.php", urllib.urlencode(form_data))
+    except:
+        pass
+    if response.code == 200:
+        soup = BeautifulSoup(response)
+        tags = soup.findAll('a')
+        for tag in tags:
+            if tag.has_key('target'):
+                if tag['href'].startswith("http://tinyurl.com/"):
+                    return tag['href']
+    return 0
+
+def usage():
+    print('\nUsage: urljam [OPTION] <URL>\nSubmits URL to the url shortener of your choice (defaults to is.god) and returns the shortened link.\n\n\t-i, --isgood\t\tUses is.gd shortner (default)\n\t-h, --help\t\tPrints this help and exits\n\t-t, --tinyurl\t\tUses tinyurl.com shortner\n\nReport bugs and your other life problems to <support@pawkypages.com>')
+
+def main(argv):
+    if len(argv) >= 1:
+        ret = ""; # Instantiate for scope
+        try:
+            opts, args = getopt.getopt(argv, "i:ht:", ["isgd", "help", "tinyurl"])
+        except getopt.error:
+            usage()
+            sys.exit(-1)
+        for opt, arg in opts:
+            if opt in ("-h", "--help"):
+                usage()
+                sys.exit(0)
+            if opt in ("-i", "--isgd"):
+                ret = isgd(arg)
+            if opt in ("-t", "--tinyurl"):
+                ret = tinyurl(arg)
+        if not ret:
+            for shorten in shorteners:
+                if not ret:
+                    ret = shorten(argv[0])
+        if ret:
+            print ret
+            sys.exit(0)
+        print "The URL shortener failed."
+        sys.exit(1)
+    else:
+        print usage()
+        sys.exit(-1)
+
+shorteners = (isgd, tinyurl,)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
+
